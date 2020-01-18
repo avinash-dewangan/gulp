@@ -13,12 +13,17 @@ const autoprefixer = require('autoprefixer');
 const cssnano = require('cssnano');
 var replace = require('gulp-replace');
 const browsersync = require('browser-sync').create(); //npm i browser-sync
-
+const cleanDir = require('gulp-clean'); //npm i gulp-clean-dir
+const rename = require("gulp-rename");
 
 // File paths
 const files = { 
-    scssPath: 'app/scss/**/*.scss',
-    jsPath: 'app/js/**/*.js'
+    scssPath: 'app/scss/editor/**/*.scss',
+    scssPathOutput: 'app/scss/output/**/*.scss',
+    scssPathCommon: 'app/scss/common/**/*.scss',
+    jsPathEditor: 'app/js/editor/**/*.js',
+    jsPathOutput: 'app/js/output/**/*.js',
+    jsPathCommon: 'app/js/common/**/*.js',
 }
 
 // Sass task: compiles the style.scss file into style.css
@@ -26,21 +31,70 @@ function scssTask(){
     return src(files.scssPath)
         .pipe(sourcemaps.init()) // initialize sourcemaps first
         .pipe(sass().on('error', sass.logError)) // compile SCSS to CSS
+        .pipe(rename({ suffix: ".min" }))
         .pipe(postcss([ autoprefixer(), cssnano() ])) // PostCSS plugins
         .pipe(sourcemaps.write('.')) // write sourcemaps file in current directory
-        .pipe(dest('dist')
+        .pipe(dest('dist/css/editor')
     ); // put final CSS in dist folder
 }
+
+// Sass task: compiles the style.scss file into style.css
+function scssTaskOutput(){    
+    return src(files.scssPathOutput)
+        .pipe(sourcemaps.init()) // initialize sourcemaps first
+        .pipe(sass().on('error', sass.logError)) // compile SCSS to CSS
+        .pipe(rename({ suffix: ".min" }))
+        .pipe(postcss([ autoprefixer(), cssnano() ])) // PostCSS plugins
+        .pipe(sourcemaps.write('.')) // write sourcemaps file in current directory
+        .pipe(dest('dist/css/output')
+    ); // put final CSS in dist folder
+}
+
+// Sass task: compiles the style.scss file into style.css
+function scssTaskCommon(){    
+    return src(files.scssPathCommon)
+        .pipe(sourcemaps.init()) // initialize sourcemaps first
+        .pipe(sass().on('error', sass.logError)) // compile SCSS to CSS
+        .pipe(rename({ suffix: ".min" }))
+        .pipe(postcss([ autoprefixer(), cssnano() ])) // PostCSS plugins
+        .pipe(sourcemaps.write('.')) // write sourcemaps file in current directory
+        .pipe(dest('dist/css/common')
+    ); // put final CSS in dist folder
+}
+
 
 // JS task: concatenates and uglifies JS files to script.js
 function jsTask(){
     return src([
-        files.jsPath
+        files.jsPathEditor
         //,'!' + 'includes/js/jquery.min.js', // to exclude any specific files
         ])
-        .pipe(concat('all.js'))
+        .pipe(concat('editor.min.js'))
         .pipe(uglify())
-        .pipe(dest('dist')
+        .pipe(dest('dist/js/editor')
+    );
+}
+
+// JS task: concatenates and uglifies JS files to script.js
+function jsTaskOutput(){
+    return src([
+        files.jsPathOutput
+        //,'!' + 'includes/js/jquery.min.js', // to exclude any specific files
+        ])
+        .pipe(concat('output.min.js'))
+        .pipe(uglify())
+        .pipe(dest('dist/js/output')
+    );
+}
+
+function jsTaskCommon(){
+    return src([
+        files.jsPathCommon
+        //,'!' + 'app/js/common/.js', // to exclude any specific files
+        ])
+        .pipe(concat('common.min.js'))
+        .pipe(uglify())
+        .pipe(dest('dist/js/common')
     );
 }
 
@@ -55,29 +109,40 @@ function cacheBustTask(){
 // Watch task: watch SCSS and JS files for changes
 // If any change, run scss and js tasks simultaneously
 function watchTask(){
-    watch([files.scssPath, files.jsPath], 
+    watch([files.scssPath, files.scssPathOutput, files.jsPathEditor, files.jsPathOutput, files.jsPathCommon], 
         series(
-            parallel(scssTask, jsTask),
-            cacheBustTask
+            parallel(scssTask, scssTaskOutput, scssTaskCommon, jsTask, jsTaskOutput, jsTaskCommon),
+             cacheBustTask
         )
     ); 
-    browsersync.init({
-        server:{
-          baseDir: './'
-        }
-      })
-      //gulp.watch('./sass/**/*.scss', style);
-      watch('./*.html').on('change', browsersync.reload);
-      watch('*.js/**/*.js').on('change', browsersync.reload);   
+    // browsersync.init({
+    //     server:{
+    //     //    opern : 'external',
+    //     //    proxy : 'http:/localhost/',
+    //     //    port : 8080,
+    //      baseDir: './'
+    //     }
+    //   });
+    //   //gulp.watch('./sass/**/*.scss', style);
+    //   watch('./*.html').on('change', browsersync.reload);
+    //   watch('*.js/**/*.js').on('change', browsersync.reload);             
 }
-// exports.style = style;
-// exports.watch = watch;
+
+function cleanDirectory(){
+    return src([
+        './dist'
+    ])
+    .pipe(cleanDir('./'))
+    .pipe(dest('./'));
+}
+
+
 
 // Export the default Gulp task so it can be run
 // Runs the scss and js tasks simultaneously
 // then runs cacheBust, then watch task
 exports.default = series(
-    parallel(scssTask, jsTask), 
-    cacheBustTask,
-    watchTask
+    parallel(cleanDirectory, scssTask, scssTaskOutput, scssTaskCommon, jsTask, jsTaskOutput, jsTaskCommon), 
+    cacheBustTask, watchTask
 );
+
