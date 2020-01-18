@@ -24,3 +24,7 @@ In this proejct, Gulp is configured to run the following functions:
 * Move final CSS and JS files to the `/dist` folder
  
 # gulp
+
+# Initialize modules
+* npm install --save-dev gulp gulp-sourcemaps gulp-sass gulp-concat gulp-uglify gulp-postcss autoprefixer cssnano gulp-replace
+* npm i browser-sync
